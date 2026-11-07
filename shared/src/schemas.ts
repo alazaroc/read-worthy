@@ -60,9 +60,17 @@ export const profileSchema = z.object({
   // Weekly email digest (opt-in). Day 0=Sunday..6=Saturday; slot is a coarse
   // time band so the backend only runs a few fixed times per day.
   digestEnabled: z.boolean().optional(),
-  digestDay: z.number().int().min(0).max(6).optional() as z.ZodType<
-    0 | 1 | 2 | 3 | 4 | 5 | 6 | undefined
-  >,
+  digestDay: z
+    .union([
+      z.literal(0),
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+      z.literal(6),
+    ])
+    .optional(),
   digestSlot: z.enum(['s0', 's8', 's16']).optional(),
   // IANA timezone for DISPLAY only (the send time is a fixed UTC hour). Stored
   // so the UI can show each user their own local send time.
