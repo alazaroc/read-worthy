@@ -192,7 +192,15 @@ export default function AppLayout() {
                 >
                   <div className="border-b border-gray-100 px-4 py-3">
                     <p className="truncate text-sm font-medium text-gray-900">{user?.email}</p>
-                    <p className="text-xs text-gray-500">{user?.role}</p>
+                    <span
+                      className={`mt-1 inline-block rounded px-2 py-0.5 text-xs font-semibold ${
+                        user?.role === 'ADMIN'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {user?.role === 'ADMIN' ? 'Admin' : 'User'}
+                    </span>
                   </div>
                   <NavLink
                     to="/app/settings"
