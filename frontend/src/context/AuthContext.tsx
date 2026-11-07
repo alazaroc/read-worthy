@@ -8,6 +8,7 @@ interface AuthUser {
   role: Role;
   emailVerified: boolean;
   isFederated: boolean;
+  picture?: string;
 }
 
 interface AuthContextValue {
@@ -40,12 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // "change password" option (federated accounts have no app password).
       const identities = payload['identities'];
       const isFederated = Array.isArray(identities) && identities.length > 0;
+      // Google federated sign-in carries a `picture` claim (profile photo URL).
+      // Native users have none -> fall back to a UserCircle icon in the UI.
+      const picture = payload['picture'] as string | undefined;
       setUser({
         sub: current.userId,
         email,
         role,
         emailVerified: payload['email_verified'] === true,
         isFederated,
+        picture,
       });
     } catch {
       setUser(null);

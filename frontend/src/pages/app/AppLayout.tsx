@@ -164,8 +164,20 @@ export default function AppLayout() {
                 aria-expanded={userMenuOpen}
                 className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-100"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-                  <UserCircle className="h-5 w-5" />
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-700">
+                  {user?.picture ? (
+                    <img
+                      src={user.picture}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <UserCircle className="h-5 w-5" />
+                  )}
                 </span>
                 <span className="hidden max-w-[12rem] truncate sm:inline">{user?.email}</span>
                 <ChevronDown
