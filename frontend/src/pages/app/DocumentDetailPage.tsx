@@ -430,7 +430,7 @@ export default function DocumentDetailPage() {
               {doc.metadata?.author && <span>{doc.metadata.author}</span>}
               {doc.metadata?.sourceDomain && <span>· {doc.metadata.sourceDomain}</span>}
               {doc.metadata?.publishedAt && (
-                <span>· {new Date(doc.metadata.publishedAt).toLocaleDateString()}</span>
+                <span>· {new Date(doc.metadata.publishedAt).toLocaleDateString('es-ES')}</span>
               )}
             </div>
             <a

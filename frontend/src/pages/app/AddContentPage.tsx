@@ -772,7 +772,7 @@ function timeAgo(iso?: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return new Date(iso).toLocaleDateString('es-ES');
 }
 
 // STATE 1 — recent imports list on the idle screen. New feature: it reads the

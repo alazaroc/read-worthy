@@ -714,16 +714,17 @@ export default function SettingsPage() {
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
                         <ShieldCheck className="h-4 w-4" />
-                        Read and saved — {syncResult.chars.toLocaleString()} characters. This is
-                        what we’ll use:
+                        Read and saved — {syncResult.chars.toLocaleString('es-ES')} characters. This
+                        is what we’ll use:
                       </div>
                       {syncResult.truncated && (
                         <div className="flex items-start gap-2 rounded border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
                           <span>
-                            Your file is {syncResult.originalChars?.toLocaleString()} characters —
-                            we stored the first {syncResult.chars.toLocaleString()} (the limit).
-                            Shorten it to the essentials if the end matters.
+                            Your file is {syncResult.originalChars?.toLocaleString('es-ES')}{' '}
+                            characters — we stored the first{' '}
+                            {syncResult.chars.toLocaleString('es-ES')} (the limit). Shorten it to
+                            the essentials if the end matters.
                           </span>
                         </div>
                       )}
@@ -753,8 +754,8 @@ export default function SettingsPage() {
             <div className="space-y-2 rounded-lg border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Currently stored — {savedSnapshot.length.toLocaleString()} characters. This is what
-                we use:
+                Currently stored — {savedSnapshot.length.toLocaleString('es-ES')} characters. This
+                is what we use:
               </div>
               <textarea
                 readOnly
@@ -984,7 +985,7 @@ function UsageCounter({ counter, value }: { counter: 'list' | 'chars'; value: st
     const over = used > MAX_ABOUT_CHARS;
     return (
       <p className={`mt-1 text-right text-xs ${over || near ? 'text-red-600' : 'text-gray-400'}`}>
-        {used.toLocaleString()}/{MAX_ABOUT_CHARS.toLocaleString()} characters
+        {used.toLocaleString('es-ES')}/{MAX_ABOUT_CHARS.toLocaleString('es-ES')} characters
       </p>
     );
   }
@@ -1001,7 +1002,7 @@ function UsageCounter({ counter, value }: { counter: 'list' | 'chars'; value: st
   const alert = overEntries || longEntries > 0 || overChars || near;
   return (
     <p className={`mt-1 text-right text-xs ${alert ? 'text-red-600' : 'text-gray-400'}`}>
-      {totalChars.toLocaleString()}/{MAX_LIST_CHARS.toLocaleString()} characters
+      {totalChars.toLocaleString('es-ES')}/{MAX_LIST_CHARS.toLocaleString('es-ES')} characters
       {longEntries > 0 && (
         <span className="text-red-600">
           {' '}
