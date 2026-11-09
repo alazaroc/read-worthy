@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import PageLoader from '../../components/ui/PageLoader';
 import Footer from '../../components/Footer';
 import VerifyEmailBanner from '../../components/VerifyEmailBanner';
+import PullToRefresh from '../../components/ui/PullToRefresh';
 
 // Primary nav = the two everyday actions. Settings is onboarding-first but
 // rarely revisited, so it lives in the user dropdown (see below), not here.
@@ -41,6 +42,7 @@ export default function AppLayout() {
   const [notConfigured, setNotConfigured] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   // Close the user dropdown on an outside click or Escape.
   useEffect(() => {
@@ -249,10 +251,12 @@ export default function AppLayout() {
 
       <VerifyEmailBanner />
 
-      <main className="app-main flex-1">
-        <div className="app-shell-width">
-          <Outlet />
-        </div>
+      <main ref={mainRef} className="app-main relative flex-1">
+        <PullToRefresh scrollRef={mainRef}>
+          <div className="app-shell-width">
+            <Outlet />
+          </div>
+        </PullToRefresh>
       </main>
 
       <Footer />
