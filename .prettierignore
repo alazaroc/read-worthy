@@ -4,3 +4,4 @@ dist-test/
 cdk.out/
 coverage/
 package-lock.json
+.kiro/settings/cli.json
