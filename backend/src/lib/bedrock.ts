@@ -144,7 +144,8 @@ async function invoke(prompt: string, maxTokens: number): Promise<string> {
 
   const res = await sendWithThrottleRetry(
     new InvokeModelCommand({
-      modelId: modelId(),
+      // Application inference profile ARN when deployed (cost attribution by tag).
+      modelId: process.env.BEDROCK_INFERENCE_PROFILE_ARN || modelId(),
       contentType: 'application/json',
       accept: 'application/json',
       body,

@@ -17,6 +17,7 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 import { ResourceNaming } from './naming';
+import { BedrockProfile } from './bedrock-profile';
 
 interface ApiStackProps extends cdk.StackProps {
   naming: ResourceNaming;
@@ -210,6 +211,13 @@ export class ApiStack extends cdk.Stack {
       // Plain on-demand model: only the single regional foundation-model ARN.
       bedrockResources = [`arn:aws:bedrock:${this.region}::foundation-model/${BEDROCK_MODEL_ID}`];
     }
+    // Application inference profile: attributes Bedrock spend by tag (project/environment)
+    // in Cost Explorer. The handlers invoke its ARN; the policy must also allow the profile itself.
+    const bedrockProfile = new BedrockProfile(this, 'BedrockProfile', {
+      profileName: naming.standard('bedrock'),
+      systemProfileId: BEDROCK_MODEL_ID,
+    });
+    bedrockResources.push(bedrockProfile.arn);
     const bedrockInvokePolicy = () =>
       new iam.PolicyStatement({ actions: ['bedrock:InvokeModel'], resources: bedrockResources });
 
@@ -226,7 +234,10 @@ export class ApiStack extends cdk.Stack {
     // Profile import (POST /profile/import) drafts a profile from fetched/pasted
     // text via one Bedrock call, so this handler needs BEDROCK_MODEL_ID in its
     // env (same model as the analysis worker) AND bedrock:InvokeModel below.
-    const profileFn = fn('ProfileFn', 'profile.ts', { BEDROCK_MODEL_ID });
+    const profileFn = fn('ProfileFn', 'profile.ts', {
+      BEDROCK_MODEL_ID,
+      BEDROCK_INFERENCE_PROFILE_ARN: bedrockProfile.arn,
+    });
     tables.profiles.grantReadWriteData(profileFn);
     // Reads + writes the per-user token map (store/clear a private-repo token).
     profileTokens.grantRead(profileFn);
@@ -282,6 +293,7 @@ export class ApiStack extends cdk.Stack {
         ...commonEnv,
         CONTENT_BUCKET: naming.standard('content'),
         BEDROCK_MODEL_ID,
+        BEDROCK_INFERENCE_PROFILE_ARN: bedrockProfile.arn,
         EMBEDDINGS_ENABLED: 'false', // Tier B embeddings deferred (OD-2)
       },
     });
