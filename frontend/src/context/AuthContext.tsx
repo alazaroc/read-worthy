@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getCurrentUser, signOut, fetchAuthSession } from 'aws-amplify/auth';
 import { ROLES, type Role } from '@app/shared';
+import { hasPendingSession } from '../lib/pendingSession';
 
 interface AuthUser {
   sub: string;
@@ -22,7 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(hasPendingSession);
 
   const loadUser = async () => {
     try {
