@@ -29,7 +29,7 @@ Convenciones de handlers backend → `conventions.md` (no duplicar aquí).
 
 - **Tipos/schemas/constantes + lógica pura** → `shared/src` (property-tested una vez, reusado por API y worker).
 - **Lógica API** → `backend/src/handlers/<dominio>.ts`.
-- **Helpers backend** → `backend/src/lib/`: `auth`, `dynamo` (doc client `ddb`), `handler-utils` (authenticate/parseBody), `response`, `ids` (newId/now), `zod-errors`, `bedrock`, `retrieve` (fetch + Readability). No inlinear en handlers.
+- **Helpers backend** → `backend/src/lib/`: `auth`, `dynamo` (doc client `ddb`), `handler-utils` (authenticate/parseBody), `response`, `ids` (newId/now), `zod-errors`, `bedrock`, `bedrock-converse` (wrapper Converse + reintentos con jitter, copiado igual en las otras apps con Bedrock), `retrieve` (fetch + Readability). No inlinear en handlers.
 - **Infra**: tablas + bucket en `storage-stack.ts`; rutas, Lambdas, SQS queue/DLQ, Secret `profile-tokens`, IAM, GSIs y policy Bedrock en `api-stack.ts`; Cognito en `auth-stack.ts`.
 - **Páginas front** → `frontend/src/pages/`; backend vía `lib/api.ts`, sesión vía `context/AuthContext.tsx`, rutas en `App.tsx`.
 

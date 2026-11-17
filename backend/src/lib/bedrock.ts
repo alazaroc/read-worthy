@@ -1,4 +1,5 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
+import { converse } from './bedrock-converse.js';
 import { z } from 'zod';
 import {
   DIFFICULTY,
@@ -17,8 +18,6 @@ import {
 const client = new BedrockRuntimeClient({});
 
 const MODEL_ID_ENV = 'BEDROCK_MODEL_ID';
-
-const textDecoder = new TextDecoder();
 
 /**
  * Enforced extraction output shape. Validated with Zod; a parse/validation
@@ -73,97 +72,22 @@ function modelId(): string {
   return id;
 }
 
-// Throttling retry policy. Bedrock on-demand enforces a requests-per-minute
-// quota; during large import batches the worker bursts well above it, so a
-// transient ThrottlingException is EXPECTED, not terminal. We retry it here with
-// exponential backoff + full jitter so the document recovers inside the same
-// invocation instead of being degraded to "Couldn't analyze" and lost (there is
-// no automatic re-analysis). Non-throttling errors are NOT retried here — the
-// callers (extract/score) keep their own small content-level retry.
-const THROTTLE_MAX_RETRIES = 5;
-const THROTTLE_BASE_DELAY_MS = 1_000;
-const THROTTLE_MAX_DELAY_MS = 20_000;
-
-/** True when a Bedrock error is a throttling / rate-limit error worth retrying. */
-function isThrottlingError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const name = err.name;
-  const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
-  return (
-    name === 'ThrottlingException' ||
-    name === 'TooManyRequestsException' ||
-    name === 'ServiceQuotaExceededException' ||
-    status === 429
-  );
-}
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
 /**
- * Send an InvokeModel command, retrying ONLY on throttling with exponential
- * backoff and full jitter. Honors the model's `Retry-After` hint when present.
+ * Invoke the configured Bedrock model with a single user prompt through the
+ * Converse API (shared wrapper: throttling retry with backoff + jitter, token
+ * usage log), returning the model's raw text output. Nova is invoked via an
+ * inference profile (e.g. global.amazon.nova-2-lite-v1:0). Kept private: the
+ * only entry points are extract/score/explain/draft.
  */
-async function sendWithThrottleRetry(command: InvokeModelCommand) {
-  let attempt = 0;
-  for (;;) {
-    try {
-      return await client.send(command);
-    } catch (err) {
-      if (!isThrottlingError(err) || attempt >= THROTTLE_MAX_RETRIES) throw err;
-      // Full jitter: random delay in [0, min(cap, base * 2^attempt)].
-      const ceil = Math.min(THROTTLE_MAX_DELAY_MS, THROTTLE_BASE_DELAY_MS * 2 ** attempt);
-      const delay = Math.floor(Math.random() * ceil);
-      attempt++;
-      console.warn(
-        JSON.stringify({
-          stage: 'bedrock-throttle',
-          attempt,
-          maxRetries: THROTTLE_MAX_RETRIES,
-          delayMs: delay,
-        })
-      );
-      await sleep(delay);
-    }
-  }
-}
-
-/**
- * Invoke the configured Bedrock model with a single user prompt using the
- * Amazon Nova request/response schema, returning the model's raw text output.
- * Nova is invoked via an inference profile (e.g. global.amazon.nova-2-lite-v1:0);
- * its body uses `schemaVersion`/`inferenceConfig` and the answer lives at
- * `output.message.content[0].text`. Kept private: the only entry points are
- * extract/explain.
- */
-async function invoke(prompt: string, maxTokens: number): Promise<string> {
-  const body = JSON.stringify({
-    schemaVersion: 'messages-v1',
-    messages: [{ role: 'user', content: [{ text: prompt }] }],
-    inferenceConfig: { maxTokens, temperature: 0 },
+async function invoke(prompt: string, maxTokens: number, operation: string): Promise<string> {
+  const { text } = await converse(client, {
+    // Application inference profile ARN when deployed (cost attribution by tag).
+    modelId: process.env.BEDROCK_INFERENCE_PROFILE_ARN || modelId(),
+    prompt,
+    maxTokens,
+    temperature: 0,
+    operation,
   });
-
-  const res = await sendWithThrottleRetry(
-    new InvokeModelCommand({
-      // Application inference profile ARN when deployed (cost attribution by tag).
-      modelId: process.env.BEDROCK_INFERENCE_PROFILE_ARN || modelId(),
-      contentType: 'application/json',
-      accept: 'application/json',
-      body,
-    })
-  );
-
-  const payload = JSON.parse(textDecoder.decode(res.body)) as {
-    output?: { message?: { content?: { text?: string }[] } };
-  };
-
-  const text = (payload.output?.message?.content ?? [])
-    .map((block) => block.text ?? '')
-    .join('')
-    .trim();
-
-  if (!text) {
-    throw new Error('Bedrock returned an empty response');
-  }
   return text;
 }
 
@@ -230,7 +154,7 @@ export async function bedrockExtract(req: ExtractionRequest): Promise<Extraction
         : `${basePrompt}\n\nREMINDER: Your previous response was invalid. Respond with ONLY the minified JSON object described above and nothing else.`;
 
     try {
-      const raw = await invoke(prompt, 4096);
+      const raw = await invoke(prompt, 4096, 'extract');
       const parsed = extractionResponseSchema.parse(parseJsonObject(raw));
       return {
         topics: parsed.topics,
@@ -399,7 +323,7 @@ export async function bedrockScore(req: ScoreRequest): Promise<BedrockScoreRespo
         : `${basePrompt}\n\nREMINDER: Your previous response was invalid. Respond with ONLY the minified JSON object described above and nothing else.`;
 
     try {
-      const raw = await invoke(prompt, 1024);
+      const raw = await invoke(prompt, 1024, 'score');
       const parsed = bedrockScoreResponseSchema.parse(parseJsonObject(raw));
       return {
         relevance: Math.round(parsed.relevance),
@@ -474,7 +398,7 @@ export async function bedrockExplain(input: ExplainInput): Promise<string> {
     .filter(Boolean)
     .join('\n');
 
-  return invoke(prompt, 1024);
+  return invoke(prompt, 1024, 'explain');
 }
 
 // ---------------------------------------------------------------------------
@@ -523,7 +447,7 @@ export async function bedrockDraftProfileFromText(text: string): Promise<DraftPr
         ? basePrompt
         : `${basePrompt}\n\nREMINDER: Respond with ONLY the minified JSON object described above and nothing else.`;
     try {
-      const raw = await invoke(prompt, 1024);
+      const raw = await invoke(prompt, 1024, 'draft-profile');
       return draftProfileResponseSchema.parse(parseJsonObject(raw));
     } catch (err) {
       lastError = err;

@@ -6,7 +6,11 @@ import { Construct } from 'constructs';
 export interface BedrockProfileProps {
   /** Resource name, e.g. `{project}-bedrock-{env}` (max 64 chars). */
   profileName: string;
-  /** System-defined profile to copy, e.g. `eu.amazon.nova-lite-v1:0` or `global.amazon.nova-2-lite-v1:0`. */
+  /**
+   * System-defined profile to copy, e.g. `eu.amazon.nova-2-lite-v1:0` or `global.amazon.nova-2-lite-v1:0`.
+   * Profiles are immutable: to switch model, also change the construct id and `profileName`, so
+   * CloudFormation creates the new profile before deleting the old one.
+   */
   systemProfileId: string;
   /**
    * Tags for the profile. Defaults to the stack's tags; pass them explicitly when the stack is
