@@ -32,3 +32,4 @@ personal-data/
 # Python bytecode (from one-off scripts)
 __pycache__/
 *.pyc
+.kiro/settings/cli.json
